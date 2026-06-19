@@ -5,7 +5,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const state = searchParams.get('state') || Math.random().toString(36).substring(2, 15);
-    const authUrl = getAuthUrl(state, request.url);
+    const authUrl = getAuthUrl(state, request);
     
     return NextResponse.redirect(authUrl);
   } catch (err) {

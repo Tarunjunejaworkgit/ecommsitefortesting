@@ -22,7 +22,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const tokenData = await exchangeCodeForToken(code, request.url);
+    const tokenData = await exchangeCodeForToken(code, request);
     
     // Decode ID Token (JWT) without verification for metadata payload
     const idToken = tokenData.id_token;

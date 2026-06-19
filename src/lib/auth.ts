@@ -7,22 +7,33 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET || '';
 const SESSION_SECRET = process.env.SESSION_SECRET || 'mokshay-session-super-secret-key-123';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
-export function getRedirectUri(reqUrl?: string) {
-  if (reqUrl) {
-    const urlObj = new URL(reqUrl);
+export function getRedirectUri(request?: Request | string) {
+  if (request) {
+    if (typeof request === 'string') {
+      const urlObj = new URL(request);
+      return `${urlObj.origin}/api/auth/callback`;
+    }
+    const headers = request.headers;
+    const proto = headers.get('x-forwarded-proto') || 'https';
+    const host = headers.get('x-forwarded-host') || headers.get('host');
+    if (host) {
+      const realProto = proto.includes(',') ? proto.split(',').pop()?.trim() || 'https' : proto;
+      return `${realProto}://${host}/api/auth/callback`;
+    }
+    const urlObj = new URL(request.url);
     return `${urlObj.origin}/api/auth/callback`;
   }
   return `${APP_URL}/api/auth/callback`;
 }
 
-export function getAuthUrl(state: string, reqUrl: string) {
-  const redirectUri = encodeURIComponent(getRedirectUri(reqUrl));
+export function getAuthUrl(state: string, request: Request | string) {
+  const redirectUri = encodeURIComponent(getRedirectUri(request));
   const tenant = TENANT_ID || 'common';
   return `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${redirectUri}&response_mode=query&scope=openid%20profile%20email%20User.Read&state=${state}`;
 }
 
-export async function exchangeCodeForToken(code: string, reqUrl: string) {
-  const redirectUri = getRedirectUri(reqUrl);
+export async function exchangeCodeForToken(code: string, request: Request | string) {
+  const redirectUri = getRedirectUri(request);
   const tenant = TENANT_ID || 'common';
   const tokenUrl = `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`;
 

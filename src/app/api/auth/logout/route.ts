@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { getAdminSession } from '@/lib/auth';
+import { getAdminSession, getPublicUrl } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(request: Request) {
@@ -26,9 +26,9 @@ export async function GET(request: Request) {
     const cookieStore = await cookies();
     cookieStore.delete('mokshay_admin_session');
 
-    return NextResponse.redirect(new URL('/admin/login', request.url));
+    return NextResponse.redirect(getPublicUrl('/admin/login', request));
   } catch (err) {
     console.error('Logout error:', err);
-    return NextResponse.redirect(new URL('/admin/login', request.url));
+    return NextResponse.redirect(getPublicUrl('/admin/login', request));
   }
 }

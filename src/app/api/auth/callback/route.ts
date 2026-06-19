@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { exchangeCodeForToken, createSessionToken } from '@/lib/auth';
+import { exchangeCodeForToken, createSessionToken, getPublicUrl } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(request: Request) {
@@ -14,11 +14,11 @@ export async function GET(request: Request) {
 
   if (error) {
     console.error('Microsoft Entra Auth Error:', error, errorDescription);
-    return NextResponse.redirect(new URL(`${loginUrlPath}?error=${encodeURIComponent(errorDescription || error)}`, request.url));
+    return NextResponse.redirect(getPublicUrl(`${loginUrlPath}?error=${encodeURIComponent(errorDescription || error)}`, request));
   }
 
   if (!code) {
-    return NextResponse.redirect(new URL(`${loginUrlPath}?error=no_authorization_code`, request.url));
+    return NextResponse.redirect(getPublicUrl(`${loginUrlPath}?error=no_authorization_code`, request));
   }
 
   try {
@@ -78,7 +78,7 @@ export async function GET(request: Request) {
         path: '/',
       });
 
-      return NextResponse.redirect(new URL('/profile', request.url));
+      return NextResponse.redirect(getPublicUrl('/profile', request));
     } else {
       // Admin session creation
       const sessionToken = createSessionToken({
@@ -111,12 +111,12 @@ export async function GET(request: Request) {
         path: '/',
       });
 
-      return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+      return NextResponse.redirect(getPublicUrl('/admin/dashboard', request));
     }
   } catch (err: any) {
     console.error('OAuth Callback exchange error:', err);
     return NextResponse.redirect(
-      new URL(`${loginUrlPath}?error=token_exchange_failed&details=${encodeURIComponent(err.message || 'unknown')}`, request.url)
+      getPublicUrl(`${loginUrlPath}?error=token_exchange_failed&details=${encodeURIComponent(err.message || 'unknown')}`, request)
     );
   }
 }

@@ -109,3 +109,14 @@ export async function getCustomerSession(): Promise<CustomerSession | null> {
     return null;
   }
 }
+
+export function getPublicUrl(path: string, request: Request): URL {
+  const headers = request.headers;
+  const proto = headers.get('x-forwarded-proto') || 'https';
+  const host = headers.get('x-forwarded-host') || headers.get('host');
+  if (host) {
+    const realProto = proto.includes(',') ? proto.split(',').pop()?.trim() || 'https' : proto;
+    return new URL(path, `${realProto}://${host}`);
+  }
+  return new URL(path, request.url);
+}

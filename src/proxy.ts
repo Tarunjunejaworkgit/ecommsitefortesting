@@ -5,6 +5,16 @@ export function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-pathname', request.nextUrl.pathname);
   
+  // Redirect /admin to /admin/dashboard
+  if (request.nextUrl.pathname === '/admin') {
+    const proto = request.headers.get('x-forwarded-proto') || 'https';
+    const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || 'localhost:3000';
+    const realProto = proto.includes(',') ? proto.split(',').pop()?.trim() || 'https' : proto;
+    return NextResponse.redirect(new URL('/admin/dashboard', `${realProto}://${host}`), {
+      headers: requestHeaders
+    });
+  }
+
   // Protect all /admin routes except /admin/login
   if (request.nextUrl.pathname.startsWith('/admin') && !request.nextUrl.pathname.startsWith('/admin/login')) {
     const sessionCookie = request.cookies.get('mokshay_admin_session')?.value;

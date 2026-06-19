@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaMssql } from '@prisma/adapter-mssql';
 
-const databaseUrl = process.env.DATABASE_URL;
+const databaseUrl = process.env.DATABASE_URL || 'sqlserver://localhost:1433;database=dummy;user=dummy;password=dummy;encrypt=true;trustServerCertificate=true';
 
 function parseSqlServerConnectionString(url: string) {
   try {

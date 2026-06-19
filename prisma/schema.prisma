@@ -1,0 +1,324 @@
+datasource db {
+  provider = "sqlserver"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String
+  slug        String    @unique
+  description String?   @db.NVarChar(1000)
+  image       String?   @db.NVarChar(500)
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Product {
+  id             String           @id @default(uuid())
+  name           String
+  slug           String           @unique
+  description    String           @db.NVarChar(Max)
+  price          Float
+  compareAtPrice Float?
+  status         String           @default("ACTIVE") // ACTIVE, DRAFT, OUT_OF_STOCK
+  sku            String?          @unique
+  sizeInfo       String?          @db.NVarChar(1000)
+  returnInfo     String?          @db.NVarChar(1000)
+  shippingInfo   String?          @db.NVarChar(1000)
+  specifications String?          @db.NVarChar(Max) // JSON or structured list
+  rating         Float            @default(5.0)
+  categoryId     String
+  category       Category         @relation(fields: [categoryId], references: [id])
+  variants       ProductVariant[]
+  images         ProductImage[]
+  orderItems     OrderItem[]
+  wishlists      Wishlist[]
+  cartItems      CartItem[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+model ProductVariant {
+  id        String     @id @default(uuid())
+  productId String
+  product   Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name      String     // e.g. "500ml", "1kg", "Red"
+  price     Float
+  sku       String?    @unique
+  stock     Int        @default(0)
+  cartItems CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model ProductImage {
+  id         String   @id @default(uuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url        String   @db.NVarChar(500)
+  altText    String?  @db.NVarChar(200)
+  isFeatured Boolean  @default(false)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+}
+
+model Customer {
+  id        String     @id @default(uuid())
+  email     String     @unique
+  firstName String?
+  lastName  String?
+  phone     String?
+  addresses Address[]
+  orders    Order[]
+  wishlists Wishlist[]
+  cart      Cart?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Address {
+  id           String   @id @default(uuid())
+  customerId   String?
+  customer     Customer? @relation(fields: [customerId], references: [id])
+  firstName    String
+  lastName     String
+  email        String
+  phone        String
+  addressLine1 String
+  addressLine2 String?
+  city         String
+  state        String
+  postalCode   String
+  country      String
+  type         String   @default("SHIPPING") // SHIPPING, BILLING
+  shippingOrders Order[] @relation("ShippingAddress")
+  billingOrders  Order[] @relation("BillingAddress")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Cart {
+  id         String     @id @default(uuid())
+  customerId String?    @unique
+  customer   Customer?  @relation(fields: [customerId], references: [id])
+  sessionId  String     @unique // For guests
+  items      CartItem[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
+model CartItem {
+  id             String          @id @default(uuid())
+  cartId         String
+  cart           Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product         @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  productVariantId String?
+  variant        ProductVariant? @relation(fields: [productVariantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  quantity       Int             @default(1)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model Order {
+  id                String      @id @default(uuid())
+  orderNumber       String      @unique // e.g., MOK-10001
+  customerId        String?
+  customer          Customer?   @relation(fields: [customerId], references: [id])
+  guestEmail        String?
+  status            String      @default("PENDING_PAYMENT") // PENDING_PAYMENT, PENDING_CONFIRMATION, AWAITING_FULFILLMENT, SHIPPED, DELIVERED, CANCELLED
+  totalAmount       Float
+  taxAmount         Float
+  shippingAmount    Float
+  shippingAddressId String
+  shippingAddress   Address     @relation("ShippingAddress", fields: [shippingAddressId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  billingAddressId  String
+  billingAddress    Address     @relation("BillingAddress", fields: [billingAddressId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  couponCode        String?
+  discountAmount    Float       @default(0.0)
+  notes             String?     @db.NVarChar(1000)
+  trackingNumber    String?
+  carrier           String?
+  items             OrderItem[]
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+}
+
+model OrderItem {
+  id               String          @id @default(uuid())
+  orderId          String
+  order            Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId        String
+  product         Product         @relation(fields: [productId], references: [id])
+  productVariantId String?
+  name             String
+  price            Float
+  quantity         Int
+  sku              String?
+  createdAt        DateTime        @default(now())
+}
+
+model Wishlist {
+  id         String   @id @default(uuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+}
+
+model BlogPost {
+  id             String       @id @default(uuid())
+  title          String
+  slug           String       @unique
+  content        String       @db.NVarChar(Max)
+  excerpt        String?      @db.NVarChar(1000)
+  featuredImage  String?      @db.NVarChar(500)
+  isFeatured     Boolean      @default(false)
+  status         String       @default("DRAFT") // DRAFT, PUBLISHED
+  seoTitle       String?
+  seoDescription String?      @db.NVarChar(500)
+  categoryId     String
+  category       BlogCategory @relation(fields: [categoryId], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model BlogCategory {
+  id        String     @id @default(uuid())
+  name      String
+  slug      String     @unique
+  posts     BlogPost[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Programme {
+  id               String                  @id @default(uuid())
+  title            String
+  slug             String                  @unique
+  description      String                  @db.NVarChar(1000)
+  content          String                  @db.NVarChar(Max)
+  featuredImage    String?                 @db.NVarChar(500)
+  startDate        DateTime
+  endDate          DateTime?
+  location         String
+  status           String                  @default("DRAFT") // DRAFT, ACTIVE, COMPLETED
+  maxRegistrations Int?
+  price            Float                   @default(0.0)
+  registrations    ProgrammeRegistration[]
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+}
+
+model ProgrammeRegistration {
+  id          String    @id @default(uuid())
+  programmeId String
+  programme   Programme @relation(fields: [programmeId], references: [id], onDelete: Cascade)
+  firstName   String
+  lastName    String
+  email       String
+  phone       String
+  status      String    @default("PENDING") // PENDING, CONFIRMED, CANCELLED
+  notes       String?   @db.NVarChar(1000)
+  createdAt   DateTime  @default(now())
+}
+
+model BulkPurchaseLead {
+  id                String   @id @default(uuid())
+  name              String
+  email             String
+  phone             String
+  companyName       String?
+  quantity          Int
+  productOfInterest String
+  enquiryType       String   @default("WHOLESALE") // WHOLESALE, CORPORATE, BULK_REQUEST
+  message           String   @db.NVarChar(Max)
+  status            String   @default("NEW") // NEW, IN_PROGRESS, CONTACTED, CLOSED, SPAM
+  notes             String?  @db.NVarChar(1000)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Deal {
+  id            String    @id @default(uuid())
+  title         String
+  subtitle      String?
+  description   String?   @db.NVarChar(1000)
+  discountValue Float
+  discountType  String    @default("PERCENTAGE") // PERCENTAGE, FIXED
+  code          String?
+  bannerImage   String?   @db.NVarChar(500)
+  startDate     DateTime
+  endDate       DateTime
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Testimonial {
+  id          String   @id @default(uuid())
+  name        String
+  role        String?
+  company     String?
+  content     String   @db.NVarChar(1000)
+  rating      Int      @default(5)
+  avatarImage String?  @db.NVarChar(500)
+  isFeatured  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model HeroBanner {
+  id              String   @id @default(uuid())
+  title           String
+  subtitle        String?
+  ctaText         String?
+  ctaLink         String?
+  backgroundImage String   @db.NVarChar(500)
+  order           Int      @default(0)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+}
+
+model CMSPage {
+  id        String   @id @default(uuid())
+  key       String   @unique // e.g. 'home', 'about', 'faq', 'contact', 'shipping', 'returns', 'privacy', 'terms'
+  title     String
+  content   String   @db.NVarChar(Max) // JSON payload representing customizable sections
+  metadata  String?  @db.NVarChar(1000) // SEO metadata title/desc
+  updatedAt DateTime @updatedAt
+}
+
+model SEORecord {
+  id          String   @id @default(uuid())
+  path        String   @unique // e.g. '/shop', '/blog'
+  title       String
+  description String?  @db.NVarChar(500)
+  keywords    String?  @db.NVarChar(500)
+  ogImage     String?  @db.NVarChar(500)
+  twitterCard String?  @db.NVarChar(100)
+  updatedAt   DateTime @updatedAt
+}
+
+model MediaAsset {
+  id            String   @id @default(uuid())
+  filename      String
+  url           String   @db.NVarChar(500)
+  sizeBytes     Int
+  mimeType      String
+  containerName String   @default("media")
+  createdAt     DateTime @default(now())
+}
+
+model AdminActivityLog {
+  id             String   @id @default(uuid())
+  adminUserEmail String
+  action         String
+  details        String?  @db.NVarChar(1000)
+  ipAddress      String?
+  createdAt      DateTime @default(now())
+}
